@@ -1,0 +1,11 @@
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/bin/Debug/netcoreapp2.1/firstApp.deps.json
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/bin/Debug/netcoreapp2.1/firstApp.runtimeconfig.json
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/bin/Debug/netcoreapp2.1/firstApp.runtimeconfig.dev.json
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/bin/Debug/netcoreapp2.1/firstApp.dll
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/bin/Debug/netcoreapp2.1/firstApp.pdb
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/obj/Debug/netcoreapp2.1/firstApp.csprojAssemblyReference.cache
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/obj/Debug/netcoreapp2.1/firstApp.csproj.CoreCompileInputs.cache
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/obj/Debug/netcoreapp2.1/firstApp.AssemblyInfoInputs.cache
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/obj/Debug/netcoreapp2.1/firstApp.AssemblyInfo.cs
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/obj/Debug/netcoreapp2.1/firstApp.dll
+/Users/Brian/Desktop/Bridgewater/practice/csharp/firstApp/obj/Debug/netcoreapp2.1/firstApp.pdb
