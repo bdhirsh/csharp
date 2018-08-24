@@ -25,13 +25,13 @@ namespace firstApp {
         }
 
 
-        class Entry<T> {
-            public Entry(T val, Entry<T> next) {
+        class Entry<S> {
+            public Entry(S val, Entry<S> next) {
                 this.val = val;
                 this.next = next;
             }
-            public T val;
-            public Entry<T> next;
+            public S val;
+            public Entry<S> next;
         }
 
     }
