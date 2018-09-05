@@ -3,7 +3,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Text;
+using System.IO;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace practice {
     class Server {
@@ -46,15 +48,41 @@ namespace practice {
                 string path = responseFirstLine.Substring(responseFirstLine.IndexOf("/"));
                 Console.WriteLine("PATH: " + path);
 
-                //if main page, display the form
                 if (path.Equals("/")) {
+
+                    //if main page, display the form
                     Console.WriteLine("received data (" + bytesRead + " bytes) from client: " + data);
                     sendForm(nwStream);
-                } else if (path.StartsWith("/?url=") && !path.Equals("/?url=")) {
-                    string url = path.Substring(6);
-                    url = fixUnicodeChars(url);
-                    Console.WriteLine("URL: " + url);
-                    sendLinkData(nwStream, url);
+
+                } else if (path.StartsWith("/?url_to_crawl=") && !path.Equals("/?url_to_crawl=")) {
+
+                    //if url_to_crawl form is filled out, extract links from url
+                    Regex pathRegex = new Regex(@"/?url_to_crawl=(.+)");
+                    Match match = pathRegex.Match(path);
+                    if (match.Success) {
+                        string url = fixUnicodeChars(match.Groups[1].Value);
+                        int threads = Int32.Parse(match.Groups[2].Value);
+                        Console.WriteLine("URL: " + url);
+                        sendLinkData(nwStream, url);
+                    } else {
+                        Console.WriteLine("ERROR: " + path + " is not a valid URL");
+                        sendError(nwStream, path);
+                    }
+
+                } else if (path.StartsWith("/?url_to_count=") && path.Contains("threads=") && !path.Equals("/?url_to_count=")) {
+
+                    //if url_to_count form is filled out, perform a word count on the url
+                    Regex pathRegex = new Regex(@"/?url_to_count=(.+)&threads=(\d+)");
+                    Match match = pathRegex.Match(path);
+                    if (match.Success) {
+                        string url = fixUnicodeChars(match.Groups[1].Value);
+                        int threads = Int32.Parse(match.Groups[2].Value);
+                        Console.WriteLine("url: " + url + ", threads: " + threads);
+                        sendWordCountData(nwStream, url, threads);
+                    } else {
+                        Console.WriteLine("ERROR: " + path + " is not a valid URL");
+                        sendError(nwStream, path);
+                    }
                 } else {
                     Console.WriteLine("ERROR: " + path + " is not a valid URL");
                     sendError(nwStream, path);
@@ -67,7 +95,7 @@ namespace practice {
 
         private void sendForm(NetworkStream nwStream) {
             //write the data back to the client and wait 10 seconds in total per thread
-                Thread.Sleep(1000);
+                Thread.Sleep(100);
                 int workerThreads;
                 int portThreads;
                 ThreadPool.GetAvailableThreads(out workerThreads, out portThreads);
@@ -78,9 +106,14 @@ namespace practice {
                                 +     "<h1>Hello!</h1>\r\n"
                                 +     "ID of thread servicing your request: " + Thread.CurrentThread.ManagedThreadId + "<br>\r\n"
                                 +     "unused worker threads: " + workerThreads + "<br>\r\n"
-                                +     "unused port threads: " + portThreads + "<br>\r\n"
-                                +     "<form>\r\nEnter a URL:<br>\r\n"
-                                +       "<input type=\"text\" name=\"url\"><br>\r\n"
+                                +     "unused port threads: " + portThreads + "<br><br><br>\r\n"
+                                +     "<form>\r\nEnter a URL to extract links from:<br>\r\n"
+                                +       "<input type=\"text\" name=\"url_to_crawl\"><br>\r\n"
+                                +       "<input type=\"submit\" value=\"submit\">\r\n"
+                                +     "</form><br><br>\r\n"
+                                +     "<form>\r\nOr enter a URL to perform a wordcount on (and a number of threads to use):<br>\r\n"
+                                +       "<input type=\"text\" name=\"url_to_count\"><br>\r\n"
+                                +       "<input type=\"number\" name=\"threads\"><br>\r\n"
                                 +       "<input type=\"submit\" value=\"submit\">\r\n"
                                 +     "</form>\r\n"
                                 +   "</body>\r\n"
@@ -88,13 +121,35 @@ namespace practice {
                 );
                 byte[] output = Encoding.UTF8.GetBytes(outputStr);
                 nwStream.Write(output, 0, output.Length);
-                Thread.Sleep(1000);
+                Thread.Sleep(100);
+                nwStream.Close();
+        }
+
+        // given a URL and number of threads from the response, perform word count on the url and report back results
+        private void sendWordCountData(NetworkStream nwStream, string url, int threads) {
+            Thread.Sleep(100);
+            scraper.CountData data = scraper.Scraper.scrapeWordCount(url, threads);
+            string outputStr = formatBody(
+                                  "<html>\r\n"
+                                +     "<body>\r\n"
+                                +     "ID of thread servicing your request: " + Thread.CurrentThread.ManagedThreadId + "<br>\r\n"
+                                +     "<h4>Word Count Results</h4>\r\n"
+                                +     "url = " + url + "<br>\r\n"
+                                +     "threads used = " + threads + "<br>\r\n"
+                                +     "word count = " + data.wordCount + "<br>\r\n"
+                                +     "time taken = " + data.time + "<br>\r\n"
+                                +   "</body>\r\n"
+                                + "</html>"
+                );
+                byte[] output = Encoding.UTF8.GetBytes(outputStr);
+                nwStream.Write(output, 0, output.Length);
+                Thread.Sleep(100);
                 nwStream.Close();
         }
 
         // given a URL from the response, parse it and display all links from its source
         private void sendLinkData(NetworkStream nwStream, string url) {
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
             HashSet<string> links = scraper.Scraper.scrapeLinks(url);
             StringBuilder outputBuilder = new StringBuilder();
             outputBuilder.Append(
@@ -106,7 +161,7 @@ namespace practice {
             );
             foreach (string link in links) {
                 outputBuilder.Append(
-                       "<li>" + link + "</li>\r\n"
+                       "<li><a href=" + link + ">" + link + "</a></li>\r\n"
                 );
             }
             outputBuilder.Append(
@@ -118,14 +173,18 @@ namespace practice {
             string outputStr = formatBody(outputBuilder.ToString());
             byte[] output = Encoding.UTF8.GetBytes(outputStr);
             nwStream.Write(output, 0, output.Length);
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
 
             //redirect user if they click on a resulting hyperlink
-            byte[] buffer = new byte[10]; //max length url
-            Console.WriteLine("about to read in response from clicking hyperlinks...");
-            int bytesRead = nwStream.Read(buffer, 0, 10);
-            string data = Encoding.ASCII.GetString(buffer, 0, 10);
-            Console.WriteLine("read: " + data);
+            try {
+                byte[] buffer = new byte[10]; //max length url
+                Console.WriteLine("about to read in response from clicking hyperlinks...");
+                int bytesRead = nwStream.Read(buffer, 0, 10);
+                string data = Encoding.ASCII.GetString(buffer, 0, 10);
+                Console.WriteLine("read: " + data);
+            } catch (IOException e) {
+                Console.WriteLine("error: " + e.Message + ".  Closing connection.");
+            }
             nwStream.Close();
         }
 
@@ -139,7 +198,7 @@ namespace practice {
                 );
                 byte[] output = Encoding.UTF8.GetBytes(outputStr);
                 nwStream.Write(output, 0, output.Length);
-                Thread.Sleep(1000);
+                Thread.Sleep(100);
                 nwStream.Close();
         }
 
